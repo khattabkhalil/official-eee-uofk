@@ -1,26 +1,19 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request, { params }) {
     try {
         const { id } = params;
 
-        const subjects = await db.query(`
-      SELECT 
-        s.*,
-        COALESCE(st.total_lectures, 0) as total_lectures,
-        COALESCE(st.total_sheets, 0) as total_sheets,
-        COALESCE(st.total_assignments, 0) as total_assignments,
-        COALESCE(st.total_exams, 0) as total_exams,
-        COALESCE(st.total_references, 0) as total_references,
-        COALESCE(st.total_questions, 0) as total_questions
-      FROM subjects s
-      LEFT JOIN statistics st ON s.id = st.subject_id
-      WHERE s.id = ?
-    `, [id]);
+        // Fetch subject statistics (simulate join)
+        const { data: subjects, error: subjError } = await supabase
+            .from('subjects')
+            .select('*')
+            .eq('id', id);
 
-        if (subjects.length === 0) {
+        if (subjError) throw subjError;
+
+        if (!subjects || subjects.length === 0) {
             return NextResponse.json(
                 { error: 'Subject not found' },
                 { status: 404 }
@@ -29,27 +22,56 @@ export async function GET(request, { params }) {
 
         const subject = subjects[0];
 
+        // Fetch stats if possible
+        const { data: statsData } = await supabase
+            .from('statistics')
+            .select('*')
+            .eq('subject_id', id);
+
+        const stats = statsData?.[0] || {};
+        const subjectWithStats = {
+            ...subject,
+            total_lectures: stats.total_lectures || 0,
+            total_sheets: stats.total_sheets || 0,
+            total_assignments: stats.total_assignments || 0,
+            total_exams: stats.total_exams || 0,
+            total_references: stats.total_references || 0,
+            total_questions: stats.total_questions || 0
+        };
+
         // Get resources for this subject
-        const resources = await db.query(`
-      SELECT r.*, a.name as added_by_name
-      FROM resources r
-      LEFT JOIN admins a ON r.added_by = a.id
-      WHERE r.subject_id = ?
-      ORDER BY r.created_at DESC
-    `, [id]);
+        // Need to join with users (added_by) to get name
+        const { data: resources, error: resError } = await supabase
+            .from('resources')
+            .select(`
+                *,
+                users:added_by (
+                    username
+                )
+            `)
+            .eq('subject_id', id)
+            .order('created_at', { ascending: false });
+
+        if (resError) throw resError;
+
+        // Map resources to include flattened added_by_name if needed
+        const mappedResources = resources.map(r => ({
+            ...r,
+            added_by_name: r.users?.username || 'Unknown' // Supabase returns object for foreign table
+        }));
 
         // Group resources by type
         const groupedResources = {
-            lectures: resources.filter(r => r.type === 'lecture'),
-            sheets: resources.filter(r => r.type === 'sheet'),
-            assignments: resources.filter(r => r.type === 'assignment'),
-            exams: resources.filter(r => r.type === 'exam'),
-            references: resources.filter(r => r.type === 'reference'),
-            important_questions: resources.filter(r => r.type === 'important_question')
+            lectures: mappedResources.filter(r => r.type === 'lecture'),
+            sheets: mappedResources.filter(r => r.type === 'sheet'),
+            assignments: mappedResources.filter(r => r.type === 'assignment'),
+            exams: mappedResources.filter(r => r.type === 'exam'),
+            references: mappedResources.filter(r => r.type === 'reference'),
+            important_questions: mappedResources.filter(r => r.type === 'important_question')
         };
 
         return NextResponse.json({
-            ...subject,
+            ...subjectWithStats,
             resources: groupedResources
         });
 
@@ -67,12 +89,12 @@ export async function PUT(request, { params }) {
         const { id } = params;
         const { name_ar, name_en, code, description_ar, description_en, semester } = await request.json();
 
-        await db.query(
-            `UPDATE subjects 
-       SET name_ar = ?, name_en = ?, code = ?, description_ar = ?, description_en = ?, semester = ?
-       WHERE id = ?`,
-            [name_ar, name_en, code, description_ar, description_en, semester, id]
-        );
+        const { error } = await supabase
+            .from('subjects')
+            .update({ name_ar, name_en, code, description_ar, description_en, semester })
+            .eq('id', id);
+
+        if (error) throw error;
 
         return NextResponse.json({ success: true });
 
@@ -89,7 +111,12 @@ export async function DELETE(request, { params }) {
     try {
         const { id } = params;
 
-        await db.query('DELETE FROM subjects WHERE id = ?', [id]);
+        const { error } = await supabase
+            .from('subjects')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
 
         return NextResponse.json({ success: true });
 

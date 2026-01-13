@@ -326,7 +326,7 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-xl">
                 <div>
                     <h1 className="text-3xl font-bold">{t('لوحة تحكم المشرف', 'Admin Dashboard')}</h1>
-                    <p className="text-secondary">{t('مرحباً', 'Welcome')}, {adminData?.name}</p>
+                    <p className="text-secondary">{t('مرحباً', 'Welcome')}, {adminData?.username}</p>
                 </div>
                 <button onClick={handleLogout} className="btn btn-danger btn-sm">
                     {t('تسجيل خروج', 'Logout')}

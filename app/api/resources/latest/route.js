@@ -1,27 +1,38 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const limit = searchParams.get('limit') || 10;
 
-        const resources = await db.query(`
-      SELECT 
-        r.*,
-        s.name_ar as subject_name_ar,
-        s.name_en as subject_name_en,
-        s.code as subject_code,
-        a.name as added_by_name
-      FROM resources r
-      LEFT JOIN subjects s ON r.subject_id = s.id
-      LEFT JOIN admins a ON r.added_by = a.id
-      ORDER BY r.created_at DESC
-      LIMIT ?
-    `, [parseInt(limit)]);
+        const { data: resources, error } = await supabase
+            .from('resources')
+            .select(`
+                *,
+                subjects:subject_id (
+                    name_ar,
+                    name_en,
+                    code
+                ),
+                users:added_by (
+                    username
+                )
+            `)
+            .order('created_at', { ascending: false })
+            .limit(parseInt(limit));
 
-        return NextResponse.json(resources);
+        if (error) throw error;
+
+        const flattened = resources.map(r => ({
+            ...r,
+            subject_name_ar: r.subjects?.name_ar,
+            subject_name_en: r.subjects?.name_en,
+            subject_code: r.subjects?.code,
+            added_by_name: r.users?.username || 'Admin'
+        }));
+
+        return NextResponse.json(flattened);
 
     } catch (error) {
         console.error('Error fetching latest resources:', error);

@@ -1,24 +1,46 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request) {
     try {
-        const subjects = await db.query(`
-      SELECT 
-        s.*,
-        COALESCE(st.total_lectures, 0) as total_lectures,
-        COALESCE(st.total_sheets, 0) as total_sheets,
-        COALESCE(st.total_assignments, 0) as total_assignments,
-        COALESCE(st.total_exams, 0) as total_exams,
-        COALESCE(st.total_references, 0) as total_references,
-        COALESCE(st.total_questions, 0) as total_questions
-      FROM subjects s
-      LEFT JOIN statistics st ON s.id = st.subject_id
-      ORDER BY s.code ASC
-    `);
+        // Fetch subjects
+        const { data: subjects, error: subjError } = await supabase
+            .from('subjects')
+            .select('*')
+            .order('code', { ascending: true });
 
-        return NextResponse.json(subjects);
+        if (subjError) throw subjError;
+
+        // Fetch statistics (if the table exists, otherwise handle gracefully)
+        const { data: statistics, error: statError } = await supabase
+            .from('statistics')
+            .select('*');
+
+        // If statistics table doesn't exist or is empty, just return subjects
+        const statsMap = {};
+        if (statistics) {
+            statistics.forEach(stat => {
+                statsMap[stat.subject_id] = stat;
+            });
+        }
+
+        const subjectsWithStats = subjects.map(s => {
+            const stat = statsMap[s.id] || {};
+            // Filter out id and created_at from stat if they conflict, though spreading usually overrides content
+            // However, we want the subject fields to take precedence or coexist. 
+            // The original SQL did `s.*, st.total_lectures...`
+            return {
+                ...s,
+                total_lectures: stat.total_lectures || 0,
+                total_sheets: stat.total_sheets || 0,
+                total_assignments: stat.total_assignments || 0,
+                total_exams: stat.total_exams || 0,
+                total_references: stat.total_references || 0,
+                total_questions: stat.total_questions || 0
+            };
+        });
+
+        return NextResponse.json(subjectsWithStats);
 
     } catch (error) {
         console.error('Error fetching subjects:', error);
@@ -40,27 +62,23 @@ export async function POST(request) {
             );
         }
 
-        const result = await db.query(
-            `INSERT INTO subjects (name_ar, name_en, code, description_ar, description_en, semester) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-            [name_ar, name_en, code, description_ar || null, description_en || null, semester || 1]
-        );
+        const { data, error } = await supabase
+            .from('subjects')
+            .insert([
+                { name_ar, name_en, code, description_ar, description_en, semester: semester || 1 }
+            ])
+            .select();
 
-        // Initialize statistics for the new subject
-        await db.query(
-            'INSERT INTO statistics (subject_id) VALUES (?)',
-            [result.insertId]
-        );
+        if (error) throw error;
 
-        return NextResponse.json({
-            id: result.insertId,
-            name_ar,
-            name_en,
-            code,
-            description_ar,
-            description_en,
-            semester
-        }, { status: 201 });
+        const newSubject = data[0];
+
+        // Initialize statistics
+        await supabase
+            .from('statistics')
+            .insert([{ subject_id: newSubject.id }]);
+
+        return NextResponse.json(newSubject, { status: 201 });
 
     } catch (error) {
         console.error('Error creating subject:', error);

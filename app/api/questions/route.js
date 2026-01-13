@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request) {
     try {
@@ -9,35 +8,41 @@ export async function GET(request) {
         const difficulty = searchParams.get('difficulty');
         const search = searchParams.get('search');
 
-        let query = `
-      SELECT q.*, s.name_ar as subject_name_ar, s.name_en as subject_name_en
-      FROM questions q
-      LEFT JOIN subjects s ON q.subject_id = s.id
-      WHERE 1=1
-    `;
-        const params = [];
+        let query = supabase
+            .from('questions')
+            .select(`
+                *,
+                subjects:subject_id (
+                    name_ar,
+                    name_en
+                )
+            `);
 
         if (subject_id) {
-            query += ' AND q.subject_id = ?';
-            params.push(subject_id);
+            query = query.eq('subject_id', subject_id);
         }
 
         if (difficulty) {
-            query += ' AND q.difficulty = ?';
-            params.push(difficulty);
+            query = query.eq('difficulty', difficulty);
         }
 
         if (search) {
-            query += ' AND (q.question_text_ar LIKE ? OR q.question_text_en LIKE ? OR q.topic_ar LIKE ? OR q.topic_en LIKE ?)';
-            const searchPattern = `%${search}%`;
-            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+            query = query.or(`question_text_ar.ilike.%${search}%,question_text_en.ilike.%${search}%,topic_ar.ilike.%${search}%,topic_en.ilike.%${search}%`);
         }
 
-        query += ' ORDER BY q.created_at DESC';
+        query = query.order('created_at', { ascending: false });
 
-        const questions = await db.query(query, params);
+        const { data: questions, error } = await query;
 
-        return NextResponse.json(questions);
+        if (error) throw error;
+
+        const flattened = questions.map(q => ({
+            ...q,
+            subject_name_ar: q.subjects?.name_ar,
+            subject_name_en: q.subjects?.name_en
+        }));
+
+        return NextResponse.json(flattened);
 
     } catch (error) {
         console.error('Error fetching questions:', error);
@@ -73,46 +78,66 @@ export async function POST(request) {
         let image_path = null;
 
         // Handle image upload
-        if (image && image instanceof File) {
-            const fs = require('fs');
-            const path = require('path');
+        if (image && image instanceof File && image.size > 0) {
+            const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-            const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'questions');
+            // Upload to Supabase Storage (using same uploads bucket or specific one)
+            // Using 'uploads' bucket for simplicity
+            const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from('uploads')
+                .upload(`questions/${fileName}`, image);
 
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
+            if (uploadError) {
+                console.error('Image upload error:', uploadError);
+                throw new Error('Image upload failed');
             }
 
-            const fileName = `${Date.now()}-${image.name}`;
-            const filePath = path.join(uploadDir, fileName);
+            const { data: publicData } = supabase
+                .storage
+                .from('uploads')
+                .getPublicUrl(`questions/${fileName}`);
 
-            const bytes = await image.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-
-            fs.writeFileSync(filePath, buffer);
-
-            image_path = `/uploads/questions/${fileName}`;
+            image_path = publicData.publicUrl;
         }
 
-        const result = await db.query(
-            `INSERT INTO questions 
-       (subject_id, topic_ar, topic_en, question_text_ar, question_text_en, 
-        answer_text_ar, answer_text_en, image_path, difficulty, added_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [subject_id, topic_ar, topic_en, question_text_ar, question_text_en,
-                answer_text_ar, answer_text_en, image_path, difficulty || 'medium', added_by]
-        );
+        const { data: questionData, error: insertError } = await supabase
+            .from('questions')
+            .insert([{
+                subject_id: parseInt(subject_id),
+                topic_ar,
+                topic_en,
+                question_text_ar,
+                question_text_en,
+                answer_text_ar,
+                answer_text_en,
+                image_path,
+                difficulty: difficulty || 'medium',
+                added_by: parseInt(added_by)
+            }])
+            .select();
+
+        if (insertError) throw insertError;
 
         // Update statistics
         if (subject_id) {
-            await db.query(
-                'UPDATE statistics SET total_questions = total_questions + 1 WHERE subject_id = ?',
-                [subject_id]
-            );
+            // Optimistic update
+            const { data: currentStat } = await supabase
+                .from('statistics')
+                .select('total_questions')
+                .eq('subject_id', subject_id)
+                .single();
+
+            if (currentStat) {
+                await supabase
+                    .from('statistics')
+                    .update({ total_questions: (currentStat.total_questions || 0) + 1 })
+                    .eq('subject_id', subject_id);
+            }
         }
 
         return NextResponse.json({
-            id: result.insertId,
+            id: questionData[0].id,
             image_path,
             success: true
         }, { status: 201 });
@@ -120,7 +145,7 @@ export async function POST(request) {
     } catch (error) {
         console.error('Error creating question:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: error.message || 'Internal server error' },
             { status: 500 }
         );
     }

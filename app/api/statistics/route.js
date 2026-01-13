@@ -1,18 +1,30 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request) {
     try {
-        const stats = await db.query(`
-            SELECT 
-                s.name_ar, s.name_en, s.code,
-                st.total_lectures, st.total_assignments, st.total_exams, st.total_questions
-            FROM statistics st
-            JOIN subjects s ON st.subject_id = s.id
-        `);
+        const { data: stats, error } = await supabase
+            .from('statistics')
+            .select(`
+                total_lectures, total_assignments, total_exams, total_questions,
+                subjects:subject_id (
+                    name_ar, name_en, code
+                )
+            `);
 
-        return NextResponse.json(stats);
+        if (error) throw error;
+
+        const flattened = stats.map(s => ({
+            name_ar: s.subjects?.name_ar,
+            name_en: s.subjects?.name_en,
+            code: s.subjects?.code,
+            total_lectures: s.total_lectures,
+            total_assignments: s.total_assignments,
+            total_exams: s.total_exams,
+            total_questions: s.total_questions
+        }));
+
+        return NextResponse.json(flattened);
     } catch (error) {
         console.error('Error fetching statistics:', error);
         return NextResponse.json(

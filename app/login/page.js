@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function LoginPage() {
     const router = useRouter();
     const { login, t } = useApp();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -24,7 +24,7 @@ export default function LoginPage() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
 
             const data = await res.json();
@@ -59,13 +59,13 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-lg">
-                        <label className="block mb-sm font-medium">{t('البريد الإلكتروني', 'Email Address')}</label>
+                        <label className="block mb-sm font-medium">{t('اسم المستخدم', 'Username')}</label>
                         <input
-                            type="email"
+                            type="text"
                             className="input"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@uofk.edu"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="admin1"
                             required
                             dir="ltr"
                         />

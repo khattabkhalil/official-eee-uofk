@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request) {
     try {
@@ -8,25 +7,36 @@ export async function GET(request) {
         const limit = searchParams.get('limit');
         const active_only = searchParams.get('active_only') !== 'false';
 
-        let query = `
-      SELECT a.*, ad.name as added_by_name
-      FROM announcements a
-      LEFT JOIN admins ad ON a.added_by = ad.id
-    `;
+        let query = supabase
+            .from('announcements')
+            .select(`
+                *,
+                users:added_by (
+                    username
+                )
+            `);
 
         if (active_only) {
-            query += ' WHERE a.is_active = TRUE';
+            query = query.eq('is_active', true);
         }
 
-        query += ' ORDER BY a.priority DESC, a.created_at DESC';
+        query = query.order('priority', { ascending: false }).order('created_at', { ascending: false });
 
         if (limit) {
-            query += ` LIMIT ${parseInt(limit)}`;
+            query = query.limit(parseInt(limit));
         }
 
-        const announcements = await db.query(query);
+        const { data: announcements, error } = await query;
 
-        return NextResponse.json(announcements);
+        if (error) throw error;
+
+        // Flatten added_by_name if needed
+        const flattened = announcements.map(a => ({
+            ...a,
+            added_by_name: a.users?.username || 'Admin'
+        }));
+
+        return NextResponse.json(flattened);
 
     } catch (error) {
         console.error('Error fetching announcements:', error);
@@ -48,15 +58,23 @@ export async function POST(request) {
             );
         }
 
-        const result = await db.query(
-            `INSERT INTO announcements 
-       (title_ar, title_en, content_ar, content_en, priority, type, added_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [title_ar, title_en, content_ar, content_en, priority || 'medium', type || 'general', added_by]
-        );
+        const { data, error } = await supabase
+            .from('announcements')
+            .insert([{
+                title_ar,
+                title_en,
+                content_ar,
+                content_en,
+                priority: priority || 'medium',
+                type: type || 'general',
+                added_by
+            }])
+            .select();
+
+        if (error) throw error;
 
         return NextResponse.json({
-            id: result.insertId,
+            id: data[0].id,
             success: true
         }, { status: 201 });
 

@@ -1,26 +1,35 @@
 import { NextResponse } from 'next/server';
-
-const db = require('@/lib/db');
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request, { params }) {
     try {
         const { id } = params;
 
-        const announcements = await db.query(`
-      SELECT a.*, ad.name as added_by_name
-      FROM announcements a
-      LEFT JOIN admins ad ON a.added_by = ad.id
-      WHERE a.id = ?
-    `, [id]);
+        const { data: announcements, error } = await supabase
+            .from('announcements')
+            .select(`
+                *,
+                users:added_by (
+                    username
+                )
+            `)
+            .eq('id', id)
+            .limit(1);
 
-        if (announcements.length === 0) {
+        if (error) throw error;
+
+        if (!announcements || announcements.length === 0) {
             return NextResponse.json(
                 { error: 'Announcement not found' },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json(announcements[0]);
+        const announcement = announcements[0];
+        return NextResponse.json({
+            ...announcement,
+            added_by_name: announcement.users?.username || 'Admin'
+        });
 
     } catch (error) {
         console.error('Error fetching announcement:', error);
@@ -36,13 +45,20 @@ export async function PUT(request, { params }) {
         const { id } = params;
         const { title_ar, title_en, content_ar, content_en, priority, type, is_active } = await request.json();
 
-        await db.query(
-            `UPDATE announcements 
-       SET title_ar = ?, title_en = ?, content_ar = ?, content_en = ?, 
-           priority = ?, type = ?, is_active = ?
-       WHERE id = ?`,
-            [title_ar, title_en, content_ar, content_en, priority, type, is_active, id]
-        );
+        const { error } = await supabase
+            .from('announcements')
+            .update({
+                title_ar,
+                title_en,
+                content_ar,
+                content_en,
+                priority,
+                type,
+                is_active
+            })
+            .eq('id', id);
+
+        if (error) throw error;
 
         return NextResponse.json({ success: true });
 
@@ -59,7 +75,12 @@ export async function DELETE(request, { params }) {
     try {
         const { id } = params;
 
-        await db.query('DELETE FROM announcements WHERE id = ?', [id]);
+        const { error } = await supabase
+            .from('announcements')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
 
         return NextResponse.json({ success: true });
 
