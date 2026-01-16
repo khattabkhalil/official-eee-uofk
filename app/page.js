@@ -24,10 +24,10 @@ export default function HomePage() {
     const fetchData = async () => {
         try {
             const [statsRes, resourcesRes, announcementsRes, questionsRes] = await Promise.all([
-                fetch('/api/statistics/overall'),
-                fetch('/api/resources/latest?limit=6'),
-                fetch('/api/announcements?limit=3'),
-                fetch('/api/questions?limit=3')
+                fetch('/api/statistics/overall', { cache: 'no-store' }),
+                fetch('/api/resources/latest?limit=6', { cache: 'no-store' }),
+                fetch('/api/announcements?limit=3', { cache: 'no-store' }),
+                fetch('/api/questions?limit=3', { cache: 'no-store' })
             ]);
 
             if (statsRes.ok) {
@@ -276,6 +276,8 @@ export default function HomePage() {
                 )}
             </section>
 
+
+
             <style jsx>{`
         .hero-section {
           text-align: center;
@@ -310,13 +312,14 @@ export default function HomePage() {
         }
 
         .hero-actions .btn {
-          min-width: 200px;
-          flex: 1;
-          max-width: 280px;
+          width: 240px;
+          height: 56px;
+          padding: 0;
         }
 
         @media (max-width: 480px) {
           .hero-actions .btn {
+            width: 100%;
             max-width: 100%;
           }
         }
@@ -441,6 +444,14 @@ export default function HomePage() {
         }
 
         @media (max-width: 768px) {
+          .section-header {
+             flex-direction: column;
+             gap: 0.5rem;
+             align-items: flex-start;
+          }
+          .section-header .btn {
+            align-self: flex-start;
+          }
           .hero-title {
             font-size: 2rem;
           }

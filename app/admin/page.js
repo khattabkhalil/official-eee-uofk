@@ -69,11 +69,11 @@ export default function AdminDashboard() {
         setLoading(true);
         try {
             const [subjRes, resRes, annRes, qRes, statRes] = await Promise.all([
-                fetch('/api/subjects'),
-                fetch('/api/resources/latest'), // Need all resources really, but let's start with this or implement a full list
-                fetch('/api/announcements'),
-                fetch('/api/questions'),
-                fetch('/api/statistics/overall')
+                fetch('/api/subjects', { cache: 'no-store' }),
+                fetch('/api/resources/latest', { cache: 'no-store' }),
+                fetch('/api/announcements', { cache: 'no-store' }),
+                fetch('/api/questions', { cache: 'no-store' }),
+                fetch('/api/statistics/overall', { cache: 'no-store' })
             ]);
 
             if (subjRes.ok) setSubjects(await subjRes.json());
@@ -260,6 +260,12 @@ export default function AdminDashboard() {
         } catch (error) {
             console.error('Error deleting question:', error);
         }
+    };
+
+    const updateSubjectStat = (subjectId, field, value) => {
+        setSubjects(prev => prev.map(s =>
+            s.id === subjectId ? { ...s, [field]: parseInt(value) || 0 } : s
+        ));
     };
 
     if (loading) return <div className="p-xl text-center"><div className="spinner"></div></div>;
@@ -571,27 +577,7 @@ export default function AdminDashboard() {
                     <p className="text-secondary">{t('مرحباً', 'Welcome')}, {adminData?.username}</p>
                 </div>
                 <div className="flex flex-wrap gap-sm w-full md:w-auto">
-                    <button
-                        onClick={async () => {
-                            if (!confirm(t('هل تريد مزامنة جميع الإحصائيات؟ قد يستغرق هذا بضع ثوانٍ.', 'Sync all statistics? This might take a few seconds.'))) return;
-                            try {
-                                const res = await fetch('/api/statistics/sync', { method: 'POST' });
-                                if (res.ok) {
-                                    alert(t('تمت المزامنة بنجاح!', 'Sync completed successfully!'));
-                                    fetchInitialData();
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                alert('Sync failed');
-                            }
-                        }}
-                        className="btn btn-outline btn-sm flex-grow md:flex-grow-0 items-center gap-xs"
-                    >
-                        🔄 {t('مزامنة', 'Sync')}
-                    </button>
-                    <button onClick={handleLogout} className="btn btn-danger btn-sm flex-grow md:flex-grow-0">
-                        {t('تسجيل خروج', 'Logout')}
-                    </button>
+                    {/* Sync button removed as requested */}
                 </div>
             </div>
 
@@ -617,6 +603,7 @@ export default function AdminDashboard() {
             </div>
 
             {activeTab === 'overview' && renderOverview()}
+
             {activeTab === 'statistics' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg fade-in">
                     {subjects.map(subject => (
@@ -630,8 +617,8 @@ export default function AdminDashboard() {
                                     <input
                                         type="number"
                                         className="input h-8 text-sm"
-                                        defaultValue={subject.total_lectures}
-                                        id={`lectures-${subject.id}`}
+                                        value={subject.total_lectures || ''}
+                                        onChange={(e) => updateSubjectStat(subject.id, 'total_lectures', e.target.value)}
                                     />
                                 </div>
                                 {['EGS11203', 'EGS11304'].includes(subject.code) && (
@@ -640,8 +627,8 @@ export default function AdminDashboard() {
                                         <input
                                             type="number"
                                             className="input h-8 text-sm"
-                                            defaultValue={subject.total_labs || 0}
-                                            id={`labs-${subject.id}`}
+                                            value={subject.total_labs || ''}
+                                            onChange={(e) => updateSubjectStat(subject.id, 'total_labs', e.target.value)}
                                         />
                                     </div>
                                 )}
@@ -651,8 +638,8 @@ export default function AdminDashboard() {
                                         <input
                                             type="number"
                                             className="input h-8 text-sm"
-                                            defaultValue={subject.total_practicals || 0}
-                                            id={`practicals-${subject.id}`}
+                                            value={subject.total_practicals || ''}
+                                            onChange={(e) => updateSubjectStat(subject.id, 'total_practicals', e.target.value)}
                                         />
                                     </div>
                                 )}
@@ -662,8 +649,8 @@ export default function AdminDashboard() {
                                         <input
                                             type="number"
                                             className="input h-8 text-sm"
-                                            defaultValue={subject.total_tutorials || 0}
-                                            id={`tutorials-${subject.id}`}
+                                            value={subject.total_tutorials || ''}
+                                            onChange={(e) => updateSubjectStat(subject.id, 'total_tutorials', e.target.value)}
                                         />
                                     </div>
                                 )}
@@ -672,8 +659,8 @@ export default function AdminDashboard() {
                                     <input
                                         type="number"
                                         className="input h-8 text-sm"
-                                        defaultValue={subject.total_assignments}
-                                        id={`assignments-${subject.id}`}
+                                        value={subject.total_assignments || ''}
+                                        onChange={(e) => updateSubjectStat(subject.id, 'total_assignments', e.target.value)}
                                     />
                                 </div>
                                 <div>
@@ -681,31 +668,24 @@ export default function AdminDashboard() {
                                     <input
                                         type="number"
                                         className="input h-8 text-sm"
-                                        defaultValue={subject.total_exams}
-                                        id={`exams-${subject.id}`}
+                                        value={subject.total_exams || ''}
+                                        onChange={(e) => updateSubjectStat(subject.id, 'total_exams', e.target.value)}
                                     />
                                 </div>
                                 <button
                                     className="btn btn-primary btn-sm w-full mt-sm"
                                     onClick={async () => {
-                                        const lectures = document.getElementById(`lectures-${subject.id}`).value;
-                                        const assignments = document.getElementById(`assignments-${subject.id}`).value;
-                                        const exams = document.getElementById(`exams-${subject.id}`).value;
-                                        const labs = document.getElementById(`labs-${subject.id}`)?.value || 0;
-                                        const practicals = document.getElementById(`practicals-${subject.id}`)?.value || 0;
-                                        const tutorials = document.getElementById(`tutorials-${subject.id}`)?.value || 0;
-
                                         try {
                                             const res = await fetch(`/api/statistics/subject/${subject.id}`, {
                                                 method: 'PUT',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
-                                                    total_lectures: parseInt(lectures),
-                                                    total_assignments: parseInt(assignments),
-                                                    total_exams: parseInt(exams),
-                                                    total_labs: parseInt(labs),
-                                                    total_practicals: parseInt(practicals),
-                                                    total_tutorials: parseInt(tutorials)
+                                                    total_lectures: subject.total_lectures || 0,
+                                                    total_assignments: subject.total_assignments || 0,
+                                                    total_exams: subject.total_exams || 0,
+                                                    total_labs: subject.total_labs || 0,
+                                                    total_practicals: subject.total_practicals || 0,
+                                                    total_tutorials: subject.total_tutorials || 0
                                                 })
                                             });
                                             if (res.ok) {
