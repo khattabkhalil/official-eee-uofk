@@ -88,7 +88,7 @@ export default function QuestionsPage() {
                             value={subjectFilter}
                             onChange={(e) => setSubjectFilter(e.target.value)}
                         >
-                            <option value="">{t('جميع المواد', 'All Subjects')}</option>
+                            <option value="">{t('جميع المقررات', 'All Courses')}</option>
                             {subjects.map(s => (
                                 <option key={s.id} value={s.id}>{t(s.name_ar, s.name_en)}</option>
                             ))}
@@ -115,8 +115,13 @@ export default function QuestionsPage() {
                             </p>
 
                             {q.image_path && (
-                                <div className="mb-lg">
-                                    <img src={q.image_path} alt="Question" className="max-w-full rounded-lg border border-color" />
+                                <div className="mb-lg rounded-lg border border-color overflow-hidden bg-white dark:bg-gray-800">
+                                    <img
+                                        src={q.image_path}
+                                        alt="Question"
+                                        className="w-full h-auto block cursor-zoom-in hover:opacity-95 transition-opacity"
+                                        onClick={(e) => window.open(e.target.src, '_blank')}
+                                    />
                                 </div>
                             )}
 
@@ -125,7 +130,22 @@ export default function QuestionsPage() {
                                     {t('عرض الإجابة', 'Show Answer')}
                                 </summary>
                                 <div className="mt-md pt-md border-t border-color text-secondary whitespace-pre-line">
-                                    {t(q.answer_text_ar, q.answer_text_en) || t('لا توجد إجابة مسجلة', 'No answer recorded')}
+                                    {t(q.answer_text_ar, q.answer_text_en)}
+                                    {!q.answer_text_ar && !q.answer_text_en && !q.answer_image_path && t('لا توجد إجابة مسجلة', 'No answer recorded')}
+
+                                    {q.answer_image_path && (
+                                        <div className="mt-md rounded-lg border border-color overflow-hidden bg-white dark:bg-gray-800">
+                                            <img
+                                                src={q.answer_image_path}
+                                                alt="Answer"
+                                                className="w-full h-auto block cursor-zoom-in hover:opacity-95 transition-opacity"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(e.target.src, '_blank');
+                                                }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </details>
                         </div>

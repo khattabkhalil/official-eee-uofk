@@ -67,6 +67,7 @@ export async function POST(request) {
         const difficulty = formData.get('difficulty');
         const added_by = formData.get('added_by');
         const image = formData.get('image');
+        const answer_image = formData.get('answer_image');
 
         if (!question_text_ar || !question_text_en) {
             return NextResponse.json(
@@ -76,21 +77,19 @@ export async function POST(request) {
         }
 
         let image_path = null;
+        let answer_image_path = null;
 
-        // Handle image upload
+        // Handle question image upload
         if (image && image instanceof File && image.size > 0) {
-            const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
-            // Upload to Supabase Storage (using same uploads bucket or specific one)
-            // Using 'uploads' bucket for simplicity
+            const fileName = `${Date.now()}-q-${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
             const { data: uploadData, error: uploadError } = await supabase
                 .storage
                 .from('uploads')
                 .upload(`questions/${fileName}`, image);
 
             if (uploadError) {
-                console.error('Image upload error:', uploadError);
-                throw new Error('Image upload failed');
+                console.error('Question image upload error:', uploadError);
+                throw new Error('Question image upload failed');
             }
 
             const { data: publicData } = supabase
@@ -99,6 +98,27 @@ export async function POST(request) {
                 .getPublicUrl(`questions/${fileName}`);
 
             image_path = publicData.publicUrl;
+        }
+
+        // Handle answer image upload
+        if (answer_image && answer_image instanceof File && answer_image.size > 0) {
+            const fileName = `${Date.now()}-a-${answer_image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from('uploads')
+                .upload(`questions/${fileName}`, answer_image);
+
+            if (uploadError) {
+                console.error('Answer image upload error:', uploadError);
+                throw new Error('Answer image upload failed');
+            }
+
+            const { data: publicData } = supabase
+                .storage
+                .from('uploads')
+                .getPublicUrl(`questions/${fileName}`);
+
+            answer_image_path = publicData.publicUrl;
         }
 
         const { data: questionData, error: insertError } = await supabase
@@ -112,8 +132,9 @@ export async function POST(request) {
                 answer_text_ar,
                 answer_text_en,
                 image_path,
+                answer_image_path,
                 difficulty: difficulty || 'medium',
-                added_by: parseInt(added_by)
+                // added_by: added_by
             }])
             .select();
 
@@ -121,24 +142,27 @@ export async function POST(request) {
 
         // Update statistics
         if (subject_id) {
-            // Optimistic update
             const { data: currentStat } = await supabase
-                .from('statistics')
+                .from('subject_statistics')
                 .select('total_questions')
-                .eq('subject_id', subject_id)
+                .eq('subject_id', parseInt(subject_id))
                 .single();
 
-            if (currentStat) {
-                await supabase
-                    .from('statistics')
-                    .update({ total_questions: (currentStat.total_questions || 0) + 1 })
-                    .eq('subject_id', subject_id);
-            }
+            const updates = {
+                subject_id: parseInt(subject_id),
+                total_questions: ((currentStat?.total_questions || 0) + 1),
+                updated_at: new Date()
+            };
+
+            await supabase
+                .from('subject_statistics')
+                .upsert(updates, { onConflict: 'subject_id' });
         }
 
         return NextResponse.json({
             id: questionData[0].id,
             image_path,
+            answer_image_path,
             success: true
         }, { status: 201 });
 

@@ -14,6 +14,7 @@ export default function HomePage() {
     });
     const [latestResources, setLatestResources] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
+    const [latestQuestions, setLatestQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -22,10 +23,11 @@ export default function HomePage() {
 
     const fetchData = async () => {
         try {
-            const [statsRes, resourcesRes, announcementsRes] = await Promise.all([
+            const [statsRes, resourcesRes, announcementsRes, questionsRes] = await Promise.all([
                 fetch('/api/statistics/overall'),
                 fetch('/api/resources/latest?limit=6'),
-                fetch('/api/announcements?limit=3')
+                fetch('/api/announcements?limit=3'),
+                fetch('/api/questions?limit=3')
             ]);
 
             if (statsRes.ok) {
@@ -41,6 +43,11 @@ export default function HomePage() {
             if (announcementsRes.ok) {
                 const announcementsData = await announcementsRes.json();
                 setAnnouncements(announcementsData);
+            }
+
+            if (questionsRes.ok) {
+                const questionsData = await questionsRes.json();
+                setLatestQuestions(questionsData);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -89,13 +96,13 @@ export default function HomePage() {
                     </h1>
                     <p className="hero-description">
                         {t(
-                            'منصة شاملة لإدارة المحتوى الأكاديمي لطلاب الفصل الدراسي الأول - قسم الهندسة الكهربائية والإلكترونية',
-                            'Comprehensive platform for managing academic content for Semester 1 students - Electrical and Electronic Engineering Department'
+                            'منصة شاملة لإدارة المحتوى الأكاديمي لطلاب قسم الهندسة الكهربائية والإلكترونية',
+                            'Comprehensive platform for managing academic content for students - Electrical and Electronic Engineering Department'
                         )}
                     </p>
                     <div className="hero-actions">
                         <Link href="/subjects" className="btn btn-primary btn-lg">
-                            {t('تصفح المواد', 'Browse Subjects')}
+                            {t('تصفح المقررات', 'Browse Courses')}
                         </Link>
                         <Link href="/questions" className="btn btn-outline btn-lg">
                             {t('بنك الأسئلة', 'Question Bank')}
@@ -106,7 +113,7 @@ export default function HomePage() {
 
             {/* Statistics Cards */}
             <section className="stats-section">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     <div className="stat-card card hover-lift">
                         <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}>
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
@@ -115,7 +122,7 @@ export default function HomePage() {
                         </div>
                         <div className="stat-content">
                             <div className="stat-value">{stats.totalLectures}</div>
-                            <div className="stat-label">{t('المحاضرات', 'Lectures')}</div>
+                            <div className="stat-label">{t('المحاضرات المدروسة', 'Lectures Studied')}</div>
                         </div>
                     </div>
 
@@ -142,57 +149,7 @@ export default function HomePage() {
                             <div className="stat-label">{t('الامتحانات', 'Exams')}</div>
                         </div>
                     </div>
-
-                    <div className="stat-card card hover-lift">
-                        <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                            </svg>
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{stats.totalSubjects}</div>
-                            <div className="stat-label">{t('المواد', 'Subjects')}</div>
-                        </div>
-                    </div>
                 </div>
-            </section>
-
-            {/* Latest Resources */}
-            <section className="section">
-                <div className="section-header">
-                    <h2 className="section-title">{t('أحدث الموارد', 'Latest Resources')}</h2>
-                    <Link href="/subjects" className="btn btn-outline btn-sm">
-                        {t('عرض الكل', 'View All')}
-                    </Link>
-                </div>
-
-                {latestResources.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                        {latestResources.map((resource) => (
-                            <div key={resource.id} className="card hover-lift">
-                                <div className="resource-card">
-                                    <div className="flex justify-between items-center mb-md">
-                                        <span className="badge badge-primary">{getResourceTypeLabel(resource.type)}</span>
-                                        <span className="text-sm text-secondary">
-                                            {new Date(resource.created_at).toLocaleDateString('ar-EG')}
-                                        </span>
-                                    </div>
-                                    <h3 className="resource-title">{resource.title_ar || resource.title_en}</h3>
-                                    <p className="resource-subject">{resource.subject_name_ar || resource.subject_name_en}</p>
-                                    {resource.source && (
-                                        <p className="text-sm text-tertiary mt-sm">
-                                            {t('المصدر:', 'Source:')} {resource.source}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="empty-state">
-                        <p>{t('لا توجد موارد متاحة حالياً', 'No resources available yet')}</p>
-                    </div>
-                )}
             </section>
 
             {/* Announcements Preview */}
@@ -206,7 +163,7 @@ export default function HomePage() {
 
                 {announcements.length > 0 ? (
                     <div className="announcements-list">
-                        {announcements.map((announcement) => (
+                        {announcements.slice(0, 1).map((announcement) => (
                             <div key={announcement.id} className="announcement-card card">
                                 <div className="flex justify-between items-start gap-md">
                                     <div className="flex-1">
@@ -230,6 +187,91 @@ export default function HomePage() {
                 ) : (
                     <div className="empty-state">
                         <p>{t('لا توجد إعلانات حالياً', 'No announcements yet')}</p>
+                    </div>
+                )}
+            </section>
+
+            {/* Latest Questions */}
+            <section className="section">
+                <div className="section-header">
+                    <h2 className="section-title">{t('أحدث الأسئلة', 'Latest Questions')}</h2>
+                    <Link href="/questions" className="btn btn-outline btn-sm">
+                        {t('عرض الكل', 'View All')}
+                    </Link>
+                </div>
+
+                {latestQuestions.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                        {latestQuestions.slice(0, 1).map((question) => (
+                            <div key={question.id} className="card hover-lift">
+                                <div className="question-card">
+                                    <div className="flex justify-between items-center mb-md">
+                                        <span className="badge badge-info">{question.subject_name_ar || question.subject_name_en}</span>
+                                        <span className="text-sm text-secondary">
+                                            {new Date(question.created_at).toLocaleDateString('ar-EG')}
+                                        </span>
+                                    </div>
+                                    <h3 className="question-title">{question.question_text_ar || question.question_text_en}</h3>
+                                    {question.image_path && (
+                                        <div className="my-md overflow-hidden rounded-md border border-color bg-tertiary/5 flex justify-center">
+                                            <img
+                                                src={question.image_path}
+                                                alt="Question"
+                                                className="max-w-full h-auto object-contain"
+                                                style={{ maxHeight: '150px' }}
+                                            />
+                                        </div>
+                                    )}
+                                    {question.topic_ar && (
+                                        <p className="text-sm text-tertiary mt-sm">
+                                            {t('الموضوع:', 'Topic:')} {question.topic_ar || question.topic_en}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="empty-state">
+                        <p>{t('لا توجد أسئلة متاحة حالياً', 'No questions available yet')}</p>
+                    </div>
+                )}
+            </section>
+
+            {/* Latest Resources */}
+            <section className="section">
+                <div className="section-header">
+                    <h2 className="section-title">{t('أحدث الموارد', 'Latest Resources')}</h2>
+                    <Link href="/subjects" className="btn btn-outline btn-sm">
+                        {t('عرض الكل', 'View All')}
+                    </Link>
+                </div>
+
+                {latestResources.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                        {latestResources.slice(0, 1).map((resource) => (
+                            <div key={resource.id} className="card hover-lift">
+                                <div className="resource-card">
+                                    <div className="flex justify-between items-center mb-md">
+                                        <span className="badge badge-primary">{getResourceTypeLabel(resource.type)}</span>
+                                        <span className="text-sm text-secondary">
+                                            {new Date(resource.created_at).toLocaleDateString('ar-EG')}
+                                        </span>
+                                    </div>
+                                    <h3 className="resource-title">{resource.title_ar || resource.title_en}</h3>
+                                    <p className="resource-subject">{resource.subject_name_ar || resource.subject_name_en}</p>
+                                    {resource.source && (
+                                        <p className="text-sm text-tertiary mt-sm">
+                                            {t('المصدر:', 'Source:')} {resource.source}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="empty-state">
+                        <p>{t('لا توجد موارد متاحة حالياً', 'No resources available yet')}</p>
                     </div>
                 )}
             </section>
@@ -265,6 +307,18 @@ export default function HomePage() {
           gap: 1rem;
           justify-content: center;
           flex-wrap: wrap;
+        }
+
+        .hero-actions .btn {
+          min-width: 200px;
+          flex: 1;
+          max-width: 280px;
+        }
+
+        @media (max-width: 480px) {
+          .hero-actions .btn {
+            max-width: 100%;
+          }
         }
 
         .stats-section {
@@ -362,6 +416,22 @@ export default function HomePage() {
           font-size: 0.9375rem;
           color: var(--text-secondary);
           line-height: 1.6;
+        }
+
+        .question-card {
+          height: 100%;
+        }
+
+        .question-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         .empty-state {

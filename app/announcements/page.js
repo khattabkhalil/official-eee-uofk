@@ -72,9 +72,11 @@ export default function AnnouncementsPage() {
                                 {t(announcement.title_ar, announcement.title_en)}
                             </h2>
 
-                            <div className="text-secondary leading-relaxed whitespace-pre-line">
+                            <div className="text-secondary leading-relaxed whitespace-pre-line mb-lg">
                                 {t(announcement.content_ar, announcement.content_en)}
                             </div>
+
+                            <ReactionSection announcementId={announcement.id} />
                         </div>
                     ))
                 ) : (
@@ -83,6 +85,80 @@ export default function AnnouncementsPage() {
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function ReactionSection({ announcementId }) {
+    const { t } = useApp();
+    const [reactions, setReactions] = useState([]);
+    const [reacted, setReacted] = useState(false);
+
+    useEffect(() => {
+        fetchReactions();
+    }, [announcementId]);
+
+    const fetchReactions = async () => {
+        try {
+            const res = await fetch(`/api/announcements/${announcementId}/reactions`);
+            if (res.ok) {
+                const data = await res.json();
+                setReactions(data);
+            }
+        } catch (e) { }
+    };
+
+    const handleReact = async (type) => {
+        if (reacted) return;
+        try {
+            const res = await fetch(`/api/announcements/${announcementId}/reactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reaction_type: type })
+            });
+            if (res.ok) {
+                setReacted(true);
+                fetchReactions();
+            }
+        } catch (e) { }
+    };
+
+    const reactionIcons = {
+        like: '👍',
+        love: '❤️',
+        wow: '😮',
+        sad: '😢'
+    };
+
+    return (
+        <div className="border-t border-color pt-md flex flex-wrap gap-md items-center">
+            <div className="flex gap-sm">
+                {Object.entries(reactionIcons).map(([type, icon]) => (
+                    <button
+                        key={type}
+                        onClick={() => handleReact(type)}
+                        className={`reaction-btn ${reacted ? 'opacity-50 cursor-default' : 'hover:scale-125 transition-transform'}`}
+                        title={t(type, type)}
+                    >
+                        {icon}
+                    </button>
+                ))}
+            </div>
+            <div className="flex gap-md ml-auto">
+                {reactions.map(r => (
+                    <span key={r.reaction_type} className="text-sm font-medium flex items-center gap-xs">
+                        {reactionIcons[r.reaction_type]} {r.count}
+                    </span>
+                ))}
+            </div>
+            <style jsx>{`
+                .reaction-btn {
+                    font-size: 1.25rem;
+                    background: none;
+                    border: none;
+                    padding: 0.25rem;
+                }
+            `}</style>
         </div>
     );
 }

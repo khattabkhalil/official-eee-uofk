@@ -46,14 +46,10 @@ export default function StatisticsPage() {
             </div>
 
             {/* Overview Cards */}
-            <div className="grid grid-cols-4 gap-lg mb-2xl">
-                <div className="card p-lg border-l-4 border-l-primary-500">
-                    <div className="text-3xl font-bold text-primary mb-xs">{stats?.totalSubjects || 0}</div>
-                    <div className="text-sm text-secondary">{t('إجمالي المواد', 'Total Subjects')}</div>
-                </div>
+            <div className="grid grid-cols-3 gap-lg mb-2xl">
                 <div className="card p-lg border-l-4 border-l-success">
                     <div className="text-3xl font-bold text-success mb-xs">{stats?.totalLectures || 0}</div>
-                    <div className="text-sm text-secondary">{t('محاضرات تم رفعها', 'Uploaded Lectures')}</div>
+                    <div className="text-sm text-secondary">{t('محاضرات تمت دراستها', 'Lectures Studied')}</div>
                 </div>
                 <div className="card p-lg border-l-4 border-l-warning">
                     <div className="text-3xl font-bold text-warning mb-xs">{stats?.totalAssignments || 0}</div>
@@ -66,7 +62,7 @@ export default function StatisticsPage() {
             </div>
 
             {/* Subject Progress */}
-            <h2 className="text-2xl font-bold mb-lg">{t('تقدم المواد', 'Subjects Progress')}</h2>
+            <h2 className="text-2xl font-bold mb-lg">{t('تقدم المقررات', 'Courses Progress')}</h2>
             <div className="grid grid-cols-2 gap-lg">
                 {subjectStats.map(stat => {
                     const progress = Math.min(100, (stat.total_lectures / maxLectures) * 100);
@@ -91,9 +87,19 @@ export default function StatisticsPage() {
                                 </div>
                             </div>
 
-                            <div className="flex gap-md mt-md text-xs text-secondary">
-                                <span>{t('المحاضرات', 'Lectures')}: {stat.total_lectures || 0}</span>
+                            <div className="flex flex-wrap gap-md mt-md text-xs text-secondary">
+                                <span>{t('المحاضرات المدروسة', 'Lectures Studied')}: {stat.total_lectures || 0}</span>
+                                {['EGS11203', 'EGS11304'].includes(stat.code) && (
+                                    <span>{t('المعامل', 'Labs')}: {stat.total_labs || 0}</span>
+                                )}
+                                {stat.code === 'EGS12405' && (
+                                    <span>{t('العملي', 'Practical')}: {stat.total_practicals || 0}</span>
+                                )}
+                                {['EGS11101', 'EGS11102'].includes(stat.code) && (
+                                    <span>{t('التمارين', 'Tutorials')}: {stat.total_tutorials || 0}</span>
+                                )}
                                 <span>{t('الواجبات', 'Assignments')}: {stat.total_assignments || 0}</span>
+                                {stat.total_exams > 0 && <span>{t('الامتحانات', 'Exams')}: {stat.total_exams || 0}</span>}
                             </div>
                             <div className="mt-sm text-xs text-tertiary">
                                 * {t('يتم تحديث الإحصائيات تلقائياً', 'Statistics update automatically')}

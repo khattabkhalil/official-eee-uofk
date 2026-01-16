@@ -9,11 +9,12 @@ export function AppProvider({ children }) {
     const [language, setLanguage] = useState('ar');
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminData, setAdminData] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
         // Load theme from localStorage
-        const savedTheme = localStorage.getItem('theme') || process.env.NEXT_PUBLIC_DEFAULT_THEME || 'light';
-        const savedLanguage = localStorage.getItem('language') || process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE || 'ar';
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        const savedLanguage = localStorage.getItem('language') || 'ar';
 
         setTheme(savedTheme);
         setLanguage(savedLanguage);
@@ -26,10 +27,20 @@ export function AppProvider({ children }) {
         // Check if admin is logged in
         const token = localStorage.getItem('adminToken');
         const admin = localStorage.getItem('adminData');
+
         if (token && admin) {
-            setIsAdmin(true);
-            setAdminData(JSON.parse(admin));
+            try {
+                const parsedAdmin = JSON.parse(admin);
+                if (parsedAdmin && parsedAdmin.id) {
+                    setIsAdmin(true);
+                    setAdminData(parsedAdmin);
+                }
+            } catch (e) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminData');
+            }
         }
+        setAuthLoading(false);
     }, []);
 
     const toggleTheme = () => {
@@ -71,6 +82,7 @@ export function AppProvider({ children }) {
             language,
             isAdmin,
             adminData,
+            authLoading,
             toggleTheme,
             toggleLanguage,
             login,

@@ -4,9 +4,14 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
 export const metadata = {
-    title: 'Official EEE UofK - University of Khartoum',
+    title: 'Official EEE UofK',
     description: 'Academic Management System for Electrical and Electronic Engineering Department - Semester 1',
     keywords: 'University of Khartoum, EEE, Electrical Engineering, Electronic Engineering, Academic Platform',
+    icons: {
+        icon: '/logo.png',
+        shortcut: '/logo.png',
+        apple: '/logo.png',
+    },
 }
 
 export default function RootLayout({ children }) {

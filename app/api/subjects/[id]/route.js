@@ -23,8 +23,9 @@ export async function GET(request, { params }) {
         const subject = subjects[0];
 
         // Fetch stats if possible
+        // Fetch stats if possible
         const { data: statsData } = await supabase
-            .from('statistics')
+            .from('subject_statistics')
             .select('*')
             .eq('subject_id', id);
 
@@ -32,32 +33,33 @@ export async function GET(request, { params }) {
         const subjectWithStats = {
             ...subject,
             total_lectures: stats.total_lectures || 0,
-            total_sheets: stats.total_sheets || 0,
             total_assignments: stats.total_assignments || 0,
             total_exams: stats.total_exams || 0,
+            total_sheets: stats.total_sheets || 0,
             total_references: stats.total_references || 0,
-            total_questions: stats.total_questions || 0
+            total_questions: stats.total_questions || 0,
+            total_labs: stats.total_labs || 0,
+            total_practicals: stats.total_practicals || 0,
+            total_tutorials: stats.total_tutorials || 0
         };
 
         // Get resources for this subject
-        // Need to join with users (added_by) to get name
         const { data: resources, error: resError } = await supabase
             .from('resources')
-            .select(`
-                *,
-                users:added_by (
-                    username
-                )
-            `)
+            .select('*')
             .eq('subject_id', id)
+            .order('order_index', { ascending: true })
             .order('created_at', { ascending: false });
 
-        if (resError) throw resError;
+        if (resError) {
+            console.error('Error fetching resources:', resError);
+            // Don't throw, just return empty resources
+        }
 
-        // Map resources to include flattened added_by_name if needed
-        const mappedResources = resources.map(r => ({
+        // Map resources
+        const mappedResources = (resources || []).map(r => ({
             ...r,
-            added_by_name: r.users?.username || 'Unknown' // Supabase returns object for foreign table
+            added_by_name: 'Admin' // Since we removed added_by tracking
         }));
 
         // Group resources by type

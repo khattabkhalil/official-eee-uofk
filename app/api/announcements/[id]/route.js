@@ -7,12 +7,7 @@ export async function GET(request, { params }) {
 
         const { data: announcements, error } = await supabase
             .from('announcements')
-            .select(`
-                *,
-                users:added_by (
-                    username
-                )
-            `)
+            .select('*')
             .eq('id', id)
             .limit(1);
 
@@ -28,7 +23,7 @@ export async function GET(request, { params }) {
         const announcement = announcements[0];
         return NextResponse.json({
             ...announcement,
-            added_by_name: announcement.users?.username || 'Admin'
+            added_by_name: 'Admin'
         });
 
     } catch (error) {

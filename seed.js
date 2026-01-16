@@ -35,35 +35,45 @@ async function seed() {
             else {
                 console.log('Inserted subject:', subject.name_en);
                 // Init statistics
-                await supabase.from('statistics').insert({ subject_id: data[0].id });
+                await supabase.from('subject_statistics').insert({ subject_id: data[0].id });
             }
         } else {
             console.log('Subject already exists:', subject.code);
+            // Ensure stats exist for existing subject
+            const { data: stats } = await supabase.from('subject_statistics').select('id').eq('subject_id', existing.id).single();
+            if (!stats) {
+                await supabase.from('subject_statistics').insert({ subject_id: existing.id });
+                console.log('Initialized stats for:', subject.name_en);
+            }
         }
     }
 
     // ---- Users (Admins) ----
-    const passwordHash = await bcrypt.hash('admin123', 10);
-    const users = [
-        { username: 'admin1', password_hash: passwordHash, role: 'admin' },
-        { username: 'admin2', password_hash: passwordHash, role: 'admin' },
-        { username: 'admin3', password_hash: passwordHash, role: 'admin' },
-        { username: 'admin4', password_hash: passwordHash, role: 'admin' },
-        { username: 'admin5', password_hash: passwordHash, role: 'admin' },
+    const admins = [
+        { username: 'admin1', password: 'admin1_eeeuofk' },
+        { username: 'admin2', password: 'admin2_eeeuofk' },
+        { username: 'admin3', password: 'admin3_eeeuofk' },
+        { username: 'admin4', password: 'admin4_eeeuofk' },
+        { username: 'admin5', password: 'admin5_eeeuofk' },
     ];
 
-    for (let user of users) {
+    for (let admin of admins) {
         // Check if exists
-        const { data: existing } = await supabase.from('users').select('id').eq('username', user.username).single();
+        const { data: existing } = await supabase.from('users').select('id').eq('username', admin.username).single();
         if (!existing) {
-            const { error } = await supabase.from('users').insert(user);
+            const passwordHash = await bcrypt.hash(admin.password, 10);
+            const { error } = await supabase.from('users').insert({
+                username: admin.username,
+                password_hash: passwordHash,
+                role: 'admin'
+            });
             if (error) {
-                console.log(`User insert error (${user.username}):`, error.message);
+                console.log(`User insert error (${admin.username}):`, error.message);
             } else {
-                console.log('Inserted user:', user.username);
+                console.log('Inserted user:', admin.username);
             }
         } else {
-            console.log('User already exists:', user.username);
+            console.log('User already exists:', admin.username);
         }
     }
 

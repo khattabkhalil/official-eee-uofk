@@ -12,8 +12,9 @@ export async function GET(request) {
         if (subjError) throw subjError;
 
         // Fetch statistics (if the table exists, otherwise handle gracefully)
+        // Fetch statistics (if the table exists, otherwise handle gracefully)
         const { data: statistics, error: statError } = await supabase
-            .from('statistics')
+            .from('subject_statistics')
             .select('*');
 
         // If statistics table doesn't exist or is empty, just return subjects
@@ -32,11 +33,15 @@ export async function GET(request) {
             return {
                 ...s,
                 total_lectures: stat.total_lectures || 0,
-                total_sheets: stat.total_sheets || 0,
                 total_assignments: stat.total_assignments || 0,
                 total_exams: stat.total_exams || 0,
+                total_sheets: stat.total_sheets || 0,
                 total_references: stat.total_references || 0,
-                total_questions: stat.total_questions || 0
+                total_important_questions: stat.total_important_questions || 0,
+                total_questions: stat.total_questions || 0,
+                total_labs: stat.total_labs || 0,
+                total_practicals: stat.total_practicals || 0,
+                total_tutorials: stat.total_tutorials || 0
             };
         });
 
@@ -75,7 +80,7 @@ export async function POST(request) {
 
         // Initialize statistics
         await supabase
-            .from('statistics')
+            .from('subject_statistics')
             .insert([{ subject_id: newSubject.id }]);
 
         return NextResponse.json(newSubject, { status: 201 });

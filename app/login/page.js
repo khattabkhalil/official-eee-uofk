@@ -65,7 +65,7 @@ export default function LoginPage() {
                             className="input"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="admin1"
+                            placeholder=""
                             required
                             dir="ltr"
                         />

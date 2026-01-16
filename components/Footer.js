@@ -3,63 +3,68 @@
 import { useApp } from '@/contexts/AppContext';
 
 export default function Footer() {
-    const { t } = useApp();
-    const currentYear = new Date().getFullYear();
+  const { t } = useApp();
+  const currentYear = new Date().getFullYear();
 
-    return (
-        <footer className="footer">
-            <div className="container">
-                <div className="footer-content">
-                    <div className="footer-section">
-                        <h3 className="footer-title">{t('جامعة الخرطوم', 'University of Khartoum')}</h3>
-                        <p className="footer-description">
-                            {t(
-                                'قسم الهندسة الكهربائية والإلكترونية - منصة إدارة المحتوى الأكاديمي للفصل الدراسي الأول',
-                                'Electrical and Electronic Engineering Department - Academic Management Platform for Semester 1'
-                            )}
-                        </p>
-                    </div>
+  return (
+    <footer className="footer">
+      <div className="container">
+        <div className="footer-content">
+          <div className="footer-section">
+            <h3 className="footer-title">{t('جامعة الخرطوم', 'University of Khartoum')}</h3>
+            <p className="footer-description">
+              {t(
+                'قسم الهندسة الكهربائية والإلكترونية - منصة إدارة المحتوى الأكاديمي',
+                'Electrical and Electronic Engineering Department - Academic Management Platform'
+              )}
+            </p>
+          </div>
 
-                    <div className="footer-section">
-                        <h4 className="footer-subtitle">{t('روابط سريعة', 'Quick Links')}</h4>
-                        <ul className="footer-links">
-                            <li><a href="/">{t('الرئيسية', 'Home')}</a></li>
-                            <li><a href="/subjects">{t('المواد', 'Subjects')}</a></li>
-                            <li><a href="/announcements">{t('الإعلانات', 'Announcements')}</a></li>
-                            <li><a href="/questions">{t('الأسئلة', 'Questions')}</a></li>
-                        </ul>
-                    </div>
+          <div className="footer-section">
+            <h4 className="footer-subtitle">{t('روابط سريعة', 'Quick Links')}</h4>
+            <ul className="footer-links">
+              <li><a href="/">{t('الرئيسية', 'Home')}</a></li>
+              <li><a href="/subjects">{t('المقررات', 'Courses')}</a></li>
+              <li><a href="/announcements">{t('الإعلانات', 'Announcements')}</a></li>
+              <li><a href="/questions">{t('الأسئلة', 'Questions')}</a></li>
+              <li style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
+                <a href="/login" className="text-secondary" style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+                  {t('بوابة المشرف', 'Admin Portal')}
+                </a>
+              </li>
+            </ul>
+          </div>
 
-                    <div className="footer-section">
-                        <h4 className="footer-subtitle">{t('المواد الدراسية', 'Subjects')}</h4>
-                        <ul className="footer-links">
-                            <li>{t('الحسبان I', 'Calculus I')}</li>
-                            <li>{t('الجبر الخطي', 'Linear Algebra')}</li>
-                            <li>{t('الفيزياء I', 'Physics I')}</li>
-                            <li>{t('برمجة الحاسوب', 'Computer Programming')}</li>
-                        </ul>
-                    </div>
+          <div className="footer-section">
+            <h4 className="footer-subtitle">{t('المقررات الدراسية', 'Courses')}</h4>
+            <ul className="footer-links">
+              <li>{t('الحسبان I', 'Calculus I')}</li>
+              <li>{t('الجبر الخطي', 'Linear Algebra')}</li>
+              <li>{t('الفيزياء I', 'Physics I')}</li>
+              <li>{t('برمجة الحاسوب', 'Computer Programming')}</li>
+            </ul>
+          </div>
 
-                    <div className="footer-section">
-                        <h4 className="footer-subtitle">{t('تواصل معنا', 'Contact Us')}</h4>
-                        <p className="footer-contact">
-                            {t('جامعة الخرطوم، الخرطوم، السودان', 'University of Khartoum, Khartoum, Sudan')}
-                        </p>
-                        <p className="footer-contact">
-                            Email: eee@uofk.edu.sd
-                        </p>
-                    </div>
-                </div>
+          <div className="footer-section">
+            <h4 className="footer-subtitle">{t('تواصل معنا', 'Contact Us')}</h4>
+            <p className="footer-contact">
+              {t('جامعة الخرطوم، الخرطوم، السودان', 'University of Khartoum, Khartoum, Sudan')}
+            </p>
+            <p className="footer-contact">
+              Email: eee@uofk.edu.sd
+            </p>
+          </div>
+        </div>
 
-                <div className="footer-bottom">
-                    <p>
-                        © {currentYear} {t('جامعة الخرطوم - قسم الهندسة الكهربائية والإلكترونية. جميع الحقوق محفوظة.',
-                            'University of Khartoum - EEE Department. All rights reserved.')}
-                    </p>
-                </div>
-            </div>
+        <div className="footer-bottom">
+          <p>
+            © {currentYear} {t('جامعة الخرطوم - قسم الهندسة الكهربائية والإلكترونية. جميع الحقوق محفوظة.',
+              'University of Khartoum - EEE Department. All rights reserved.')}
+          </p>
+        </div>
+      </div>
 
-            <style jsx>{`
+      <style jsx>{`
         .footer {
           background: var(--bg-secondary);
           border-top: 1px solid var(--border-color);
@@ -146,6 +151,6 @@ export default function Footer() {
           }
         }
       `}</style>
-        </footer>
-    );
+    </footer>
+  );
 }

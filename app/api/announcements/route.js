@@ -9,12 +9,7 @@ export async function GET(request) {
 
         let query = supabase
             .from('announcements')
-            .select(`
-                *,
-                users:added_by (
-                    username
-                )
-            `);
+            .select('*');
 
         if (active_only) {
             query = query.eq('is_active', true);
@@ -31,9 +26,9 @@ export async function GET(request) {
         if (error) throw error;
 
         // Flatten added_by_name if needed
-        const flattened = announcements.map(a => ({
+        const flattened = (announcements || []).map(a => ({
             ...a,
-            added_by_name: a.users?.username || 'Admin'
+            added_by_name: 'Admin'
         }));
 
         return NextResponse.json(flattened);
@@ -67,7 +62,7 @@ export async function POST(request) {
                 content_en,
                 priority: priority || 'medium',
                 type: type || 'general',
-                added_by
+                // added_by
             }])
             .select();
 

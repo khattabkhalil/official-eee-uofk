@@ -13,7 +13,6 @@ export async function POST(request) {
         const description_en = formData.get('description_en');
         const source = formData.get('source');
         const file_url_input = formData.get('file_url'); // If provided directly
-        const added_by = formData.get('added_by');
         const file = formData.get('file');
 
         if (!subject_id || !type || !title_ar || !title_en) {
@@ -43,7 +42,7 @@ export async function POST(request) {
                 throw new Error('File upload failed');
             }
 
-            file_path = uploadData.path; // Usually just fileName or path in bucket
+            file_path = uploadData.path;
 
             // Get Public URL
             const { data: publicData } = supabase
@@ -66,12 +65,11 @@ export async function POST(request) {
                 title_en,
                 description_ar,
                 description_en,
-                file_path, // Stores key in bucket
-                file_url,  // Stores public access URL
+                file_path,
+                file_url,
                 file_size,
                 file_type,
-                source,
-                added_by: parseInt(added_by)
+                source
             }])
             .select();
 
@@ -80,32 +78,29 @@ export async function POST(request) {
             throw insertError;
         }
 
-        // Update statistics
-        const statField = type === 'lecture' ? 'total_lectures' :
-            type === 'sheet' ? 'total_sheets' :
-                type === 'assignment' ? 'total_assignments' :
-                    type === 'exam' ? 'total_exams' :
-                        type === 'reference' ? 'total_references' :
-                            type === 'important_question' ? 'total_questions' : null;
+        const statField = type === 'assignment' ? 'total_assignments' :
+            type === 'exam' ? 'total_exams' :
+                type === 'sheet' ? 'total_sheets' :
+                    type === 'reference' ? 'total_references' :
+                        (type === 'important_question' || type === 'important_questions') ? 'total_important_questions' : null;
 
         if (statField) {
-            // First get current value
+            // New Approach: Fetch current, then upsert immediately
             const { data: currentStat } = await supabase
-                .from('statistics')
-                .select(statField)
-                .eq('subject_id', subject_id)
+                .from('subject_statistics')
+                .select('*')
+                .eq('subject_id', parseInt(subject_id))
                 .single();
 
-            if (currentStat) {
-                const newValue = (currentStat[statField] || 0) + 1;
-                await supabase
-                    .from('statistics')
-                    .update({ [statField]: newValue })
-                    .eq('subject_id', subject_id);
-            } else {
-                // Maybe create?
-                // .insert({ subject_id, [statField]: 1 })
-            }
+            const updates = {
+                subject_id: parseInt(subject_id),
+                [statField]: (currentStat ? (currentStat[statField] || 0) : 0) + 1,
+                updated_at: new Date()
+            };
+
+            await supabase
+                .from('subject_statistics')
+                .upsert(updates, { onConflict: 'subject_id' });
         }
 
         return NextResponse.json({
@@ -130,13 +125,7 @@ export async function GET(request) {
 
         let query = supabase
             .from('resources')
-            .select(`
-                *,
-                subjects:subject_id (
-                    name_ar,
-                    name_en
-                )
-            `);
+            .select('*');
 
         if (subject_id) {
             query = query.eq('subject_id', subject_id);
@@ -146,18 +135,32 @@ export async function GET(request) {
             query = query.eq('type', type);
         }
 
-        query = query.order('created_at', { ascending: false });
+        query = query.order('order_index', { ascending: true })
+            .order('created_at', { ascending: false });
 
         const { data: resources, error } = await query;
 
         if (error) throw error;
 
+        // Fetch subject names manually
+        const { data: subjects } = await supabase
+            .from('subjects')
+            .select('id, name_ar, name_en');
+
+        const subjectMap = {};
+        (subjects || []).forEach(s => {
+            subjectMap[s.id] = s;
+        });
+
         // Flatten subject names
-        const flattened = resources.map(r => ({
-            ...r,
-            subject_name_ar: r.subjects?.name_ar,
-            subject_name_en: r.subjects?.name_en
-        }));
+        const flattened = (resources || []).map(r => {
+            const subj = subjectMap[r.subject_id] || {};
+            return {
+                ...r,
+                subject_name_ar: subj.name_ar || 'N/A',
+                subject_name_en: subj.name_en || 'N/A'
+            };
+        });
 
         return NextResponse.json(flattened);
 

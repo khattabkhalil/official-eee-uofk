@@ -38,9 +38,9 @@ export default function SubjectsPage() {
   return (
     <div className="container" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
       <div className="page-header">
-        <h1 className="page-title">{t('المواد الدراسية', 'Subjects')}</h1>
+        <h1 className="page-title">{t('المقررات الدراسية', 'Courses')}</h1>
         <p className="page-description">
-          {t('جميع مواد الفصل الدراسي الأول', 'All Semester 1 subjects')}
+          {t('جميع مقررات الفصل الدراسي الأول', 'All Semester 1 courses')}
         </p>
       </div>
 
@@ -67,8 +67,38 @@ export default function SubjectsPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke="currentColor" strokeWidth="2" fill="none" />
                   </svg>
-                  <span>{subject.total_lectures} {t('محاضرة', 'lectures')}</span>
+                  <span>{subject.total_lectures} {t('محاضرة مدروسة', 'lectures studied')}</span>
                 </div>
+                {['EGS11203', 'EGS11304'].includes(subject.code) && subject.total_labs > 0 && (
+                  <div className="stat-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <span>{subject.total_labs} {t('معامل', 'labs')}</span>
+                  </div>
+                )}
+                {subject.code === 'EGS12405' && subject.total_practicals > 0 && (
+                  <div className="stat-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="4 17 10 11 14 15 20 9" />
+                      <polyline points="14 9 20 9 20 15" />
+                    </svg>
+                    <span>{subject.total_practicals} {t('عملي', 'practical')}</span>
+                  </div>
+                )}
+                {['EGS11101', 'EGS11102'].includes(subject.code) && subject.total_tutorials > 0 && (
+                  <div className="stat-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="19" x2="12" y2="5" />
+                      <polyline points="5 12 12 5 19 12" />
+                    </svg>
+                    <span>{subject.total_tutorials} {t('تمارين', 'tutorials')}</span>
+                  </div>
+                )}
                 <div className="stat-item">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -88,7 +118,7 @@ export default function SubjectsPage() {
                   {t('آخر تحديث:', 'Last updated:')} {new Date(subject.updated_at).toLocaleDateString('ar-EG')}
                 </span>
                 <span className="view-link">
-                  {t('عرض المادة', 'View Subject')} →
+                  {t('عرض المقرر', 'View Course')} →
                 </span>
               </div>
             </div>

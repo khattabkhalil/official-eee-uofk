@@ -10,6 +10,23 @@ export default function SubjectDetailPage() {
   const [subject, setSubject] = useState(null);
   const [activeTab, setActiveTab] = useState('references');
   const [loading, setLoading] = useState(true);
+  const [completedResources, setCompletedResources] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('completed_resources');
+    if (saved) {
+      setCompletedResources(JSON.parse(saved));
+    }
+  }, []);
+
+  const toggleCompletion = (resourceId) => {
+    const newCompleted = completedResources.includes(resourceId)
+      ? completedResources.filter(id => id !== resourceId)
+      : [...completedResources, resourceId];
+
+    setCompletedResources(newCompleted);
+    localStorage.setItem('completed_resources', JSON.stringify(newCompleted));
+  };
 
   useEffect(() => {
     if (params.id) {
@@ -52,13 +69,23 @@ export default function SubjectDetailPage() {
     return (
       <div className="resources-list">
         {resources.map((resource) => (
-          <div key={resource.id} className="resource-item card">
+          <div key={resource.id} className={`resource-item card ${completedResources.includes(resource.id) ? 'completed' : ''}`}>
+            <div className="completion-toggle" onClick={() => toggleCompletion(resource.id)}>
+              <div className={`checkbox ${completedResources.includes(resource.id) ? 'checked' : ''}`}>
+                {completedResources.includes(resource.id) && '✓'}
+              </div>
+            </div>
             <div className="resource-content">
               <div className="resource-header">
                 <h4 className="resource-title">{resource.title_ar || resource.title_en}</h4>
-                <span className="resource-date">
-                  {new Date(resource.created_at).toLocaleDateString('ar-EG')}
-                </span>
+                <div className="flex items-center gap-sm">
+                  {completedResources.includes(resource.id) && (
+                    <span className="badge badge-success text-xs">{t('تم الإكمال', 'Completed')}</span>
+                  )}
+                  <span className="resource-date">
+                    {new Date(resource.created_at).toLocaleDateString('ar-EG')}
+                  </span>
+                </div>
               </div>
 
               {resource.description_ar && (
@@ -110,7 +137,7 @@ export default function SubjectDetailPage() {
   if (!subject) {
     return (
       <div className="container" style={{ paddingTop: '3rem', textAlign: 'center' }}>
-        <h2>{t('المادة غير موجودة', 'Subject not found')}</h2>
+        <h2>{t('المقرر غير موجود', 'Course not found')}</h2>
       </div>
     );
   }
@@ -132,8 +159,26 @@ export default function SubjectDetailPage() {
         <div className="subject-stats-grid">
           <div className="stat-box">
             <div className="stat-value">{subject.total_lectures}</div>
-            <div className="stat-label">{t('محاضرات', 'Lectures')}</div>
+            <div className="stat-label">{t('محاضرات مدروسة', 'Lectures Studied')}</div>
           </div>
+          {['EGS11203', 'EGS11304'].includes(subject.code) && subject.total_labs > 0 && (
+            <div className="stat-box">
+              <div className="stat-value">{subject.total_labs}</div>
+              <div className="stat-label">{t('معامل', 'Labs')}</div>
+            </div>
+          )}
+          {subject.code === 'EGS12405' && subject.total_practicals > 0 && (
+            <div className="stat-box">
+              <div className="stat-value">{subject.total_practicals}</div>
+              <div className="stat-label">{t('عملي', 'Practical')}</div>
+            </div>
+          )}
+          {['EGS11101', 'EGS11102'].includes(subject.code) && subject.total_tutorials > 0 && (
+            <div className="stat-box">
+              <div className="stat-value">{subject.total_tutorials}</div>
+              <div className="stat-label">{t('تمارين', 'Tutorials')}</div>
+            </div>
+          )}
           <div className="stat-box">
             <div className="stat-value">{subject.total_sheets}</div>
             <div className="stat-label">{t('أوراق', 'Sheets')}</div>
@@ -315,10 +360,46 @@ export default function SubjectDetailPage() {
         }
 
         .resource-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 1.5rem;
           padding: 1.5rem;
+          transition: all 0.3s ease;
+        }
+        
+        .resource-item.completed {
+          opacity: 0.7;
+          border-color: var(--success-200);
+          background: var(--success-50);
+        }
+
+        .completion-toggle {
+          cursor: pointer;
+          flex-shrink: 0;
+          padding-top: 0.25rem;
+        }
+
+        .checkbox {
+          width: 24px;
+          height: 24px;
+          border: 2px solid var(--border-color);
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--bg-primary);
+          color: white;
+          font-weight: bold;
+          transition: all 0.2s ease;
+        }
+
+        .checkbox.checked {
+          background: var(--success-500);
+          border-color: var(--success-500);
         }
 
         .resource-content {
+          flex: 1;
           display: flex;
           flex-direction: column;
           gap: 1rem;

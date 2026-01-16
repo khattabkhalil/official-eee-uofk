@@ -35,26 +35,32 @@ async function setupDatabase() {
       const { data, error } = await supabase.from('subjects').insert(subject).select();
       if (!error && data[0]) {
         console.log(`✅ Subject created: ${subject.name_en}`);
-        await supabase.from('statistics').insert({ subject_id: data[0].id });
+        await supabase.from('subject_statistics').insert({ subject_id: data[0].id });
+      }
+    } else {
+      // Ensure stats exist
+      const { data: stats } = await supabase.from('subject_statistics').select('id').eq('subject_id', existing.id).single();
+      if (!stats) {
+        await supabase.from('subject_statistics').insert({ subject_id: existing.id });
       }
     }
   }
 
   // Admins
-  const passwordHash = await bcrypt.hash('admin123', 10);
-  const users = [
-    { username: 'admin1', password_hash: passwordHash, role: 'admin' },
-    { username: 'admin2', password_hash: passwordHash, role: 'admin' },
-    { username: 'admin3', password_hash: passwordHash, role: 'admin' },
-    { username: 'admin4', password_hash: passwordHash, role: 'admin' },
-    { username: 'admin5', password_hash: passwordHash, role: 'admin' }
+  const admins = [
+    { username: 'admin1', password: 'admin1_eeeuofk' },
+    { username: 'admin2', password: 'admin2_eeeuofk' },
+    { username: 'admin3', password: 'admin3_eeeuofk' },
+    { username: 'admin4', password: 'admin4_eeeuofk' },
+    { username: 'admin5', password: 'admin5_eeeuofk' },
   ];
 
-  for (const user of users) {
-    const { data: existing } = await supabase.from('users').select('id').eq('username', user.username).single();
+  for (const admin of admins) {
+    const { data: existing } = await supabase.from('users').select('id').eq('username', admin.username).single();
     if (!existing) {
-      const { error } = await supabase.from('users').insert(user);
-      if (!error) console.log(`✅ Admin created: ${user.username}`);
+      const passwordHash = await bcrypt.hash(admin.password, 10);
+      const { error } = await supabase.from('users').insert({ username: admin.username, password_hash: passwordHash, role: 'admin' });
+      if (!error) console.log(`✅ Admin created: ${admin.username}`);
     }
   }
 
